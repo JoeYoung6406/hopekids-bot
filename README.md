@@ -3,8 +3,7 @@
 每週六晚上 20:00（台北時間）自動抓取「當週服事表」Google 試算表，
 排成 Hope Kids 品牌風格的 Flex 卡片，推播到 LINE 服事群組。
 
-訊息會以「**Hope Kids Bot**」的名稱與 Hope Kids logo 頭像顯示
-（透過 LINE 的 sender 覆寫，寫在 `push_weekly.py` 裡）。
+訊息以官方帳號「**Hope Kids Bot**」的名稱與頭像顯示。
 
 ## 一次性設定步驟
 
@@ -48,6 +47,6 @@ DRY_RUN=1 python push_weekly.py
 
 - **發送時間**：改 `.github/workflows/weekly.yml` 的 cron（注意是 UTC，台北時間減 8 小時）
 - **顯示的崗位**：改 `push_weekly.py` 開頭的 `ROLES` 清單
-- **Bot 名稱／頭像**：改 `push_weekly.py` 的 `BOT_NAME`、`BOT_ICON`
+- **Bot 名稱／頭像**：在 LINE Official Account Manager 的帳號設定裡改
 - **資料來源**：試算表需維持「知道連結的使用者可檢視」，且「當週服事表」分頁
   的日期格式為 `日期：YYYY/MM/DD`、崗位格式為 `崗位：名字`

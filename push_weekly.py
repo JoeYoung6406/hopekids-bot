@@ -24,9 +24,6 @@ SHEET_VIEW_URL = (
     f"/edit?gid={WEEKLY_GID}#gid={WEEKLY_GID}"
 )
 
-BOT_NAME = "Hope Kids Bot"
-BOT_ICON = "https://joeyoung6406.github.io/hopekids-tc/logo.png"
-
 # 要顯示在卡片上的崗位（依這個順序排列）
 ROLES = [
     "敬拜", "禱告", "奉獻", "投影", "破冰",
@@ -196,7 +193,6 @@ def build_flex(date_str, roles, duty, rally):
         "type": "flex",
         "altText": f"Hope Kids 本週服事夥伴 {date_str or ''}".strip(),
         "contents": bubble,
-        "sender": {"name": BOT_NAME, "iconUrl": BOT_ICON},
     }
 
 
