@@ -1,0 +1,26 @@
+name: Hope Kids 每週服事表推播
+
+on:
+  schedule:
+    - cron: '0 12 * * 6'   # 每週六 UTC 12:00 = 台北時間 20:00
+  workflow_dispatch:         # 允許手動觸發測試
+
+jobs:
+  push-roster:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        run: pip install requests
+
+      - name: Push weekly roster to LINE
+        env:
+          LINE_TOKEN: ${{ secrets.LINE_TOKEN }}
+          LINE_GROUP_ID: ${{ secrets.LINE_GROUP_ID }}
+        run: python push_weekly.py
