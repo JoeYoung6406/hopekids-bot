@@ -1,8 +1,10 @@
 name: Hope Kids 每週服事表推播
 
 on:
-  schedule:
-    - cron: '0 12 * * 6'   # 每週六 UTC 12:00 = 台北時間 20:00
+  # 目前接的是測試群組，定期排程先關閉。
+  # 換到正式群組後：更新 LINE_GROUP_ID secret，並把下面兩行取消註解。
+  # schedule:
+  #   - cron: '0 12 * * 6'   # 每週六 UTC 12:00 = 台北時間 20:00
   workflow_dispatch:         # 允許手動觸發測試
 
 jobs:
