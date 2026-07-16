@@ -79,8 +79,10 @@ def parse_schedule(rows):
                     duty = non_empty[-1]
             if cell == "Rally" and rally is None:
                 time_part = next((c for c in cells[:i] if re.match(r"\d{1,2}:\d{2}", c)), "")
-                note_part = next((c for c in cells[i + 1:] if c), "")
-                rally = " ".join(x for x in [time_part, note_part] if x)
+                # 只取開始時間並去掉前導 0（08:00-08:10 → 8:00），說明文字固定
+                tm = re.match(r"0?(\d{1,2}:\d{2})", time_part)
+                start = tm.group(1) if tm else ""
+                rally = f"time: {start} 請準時到Main Hall集合" if start else "請準時到Main Hall集合"
 
     return date_str, roles, duty, rally
 
