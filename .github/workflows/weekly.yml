@@ -5,6 +5,9 @@ on:
     - cron: '0 10 * * 2'   # 每週二 UTC 10:00 = 台北時間 18:00
   workflow_dispatch:         # 允許手動觸發測試
 
+permissions:
+  contents: write            # 發送後把結果寫回 SEND_LOG.md
+
 jobs:
   push-roster:
     runs-on: ubuntu-latest
@@ -20,7 +23,19 @@ jobs:
         run: pip install requests
 
       - name: Push weekly roster to LINE
+        id: send
         env:
           LINE_TOKEN: ${{ secrets.LINE_TOKEN }}
           LINE_GROUP_ID: ${{ secrets.LINE_GROUP_ID }}
         run: python push_weekly.py
+
+      - name: Record send log
+        if: always() && steps.send.outcome != 'skipped'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          echo "| $(TZ=Asia/Taipei date '+%Y-%m-%d %H:%M') | ${{ github.workflow }} | ${{ github.event_name }} | ${{ steps.send.outcome }} |" >> SEND_LOG.md
+          git add SEND_LOG.md
+          git commit -m "log: 發送紀錄 $(TZ=Asia/Taipei date '+%Y-%m-%d %H:%M')"
+          git pull --rebase origin main
+          git push

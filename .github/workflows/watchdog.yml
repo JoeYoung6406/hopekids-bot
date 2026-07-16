@@ -1,0 +1,32 @@
+name: 推播監控（漏發自動補發）
+
+on:
+  schedule:
+    - cron: '0 12 * * 2'   # 週二 UTC 12:00 = 台北 20:00，發送兩小時後檢查
+  workflow_dispatch:
+
+permissions:
+  actions: write
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: 檢查是否已成功推播，漏發就自動補發
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          cutoff=$(date -u -d '6 hours ago' +%s)
+          ok=$(gh run list --workflow=weekly.yml --limit 20 --json conclusion,createdAt \
+            --jq "[.[] | select(.conclusion==\"success\" and (.createdAt|fromdate) > $cutoff)] | length")
+          if [ "$ok" -gt 0 ]; then
+            echo "過去 6 小時內有 $ok 筆成功推播，一切正常。"
+            exit 0
+          fi
+          echo "::warning::過去 6 小時內沒有成功推播，自動補發一次。"
+          gh workflow run weekly.yml
+          sleep 30
+          run_id=$(gh run list --workflow=weekly.yml --limit 1 --json databaseId --jq '.[0].databaseId')
+          gh run watch "$run_id" --exit-status
+          echo "補發成功。"
