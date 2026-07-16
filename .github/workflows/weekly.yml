@@ -2,7 +2,7 @@ name: Hope Kids 每週服事表推播
 
 on:
   schedule:
-    - cron: '0 12 * * 6'   # 每週六 UTC 12:00 = 台北時間 20:00
+    - cron: '0 10 * * 2'   # 每週二 UTC 10:00 = 台北時間 18:00
   workflow_dispatch:         # 允許手動觸發測試
 
 jobs:
