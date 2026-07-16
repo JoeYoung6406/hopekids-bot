@@ -25,9 +25,11 @@ SHEET_VIEW_URL = (
 )
 
 # 要顯示在卡片上的崗位（依這個順序排列）
+# 支持夥伴兩項來自當月班表分頁，其餘來自當週服事表
 ROLES = [
     "投影", "破冰", "敬拜", "奉獻", "禱告",
-    "小班故事", "大班故事", "小班勞作", "大班勞作",
+    "小班故事", "小班勞作", "小班支持夥伴",
+    "大班故事", "大班勞作", "大班支持夥伴",
 ]
 # 崗位標籤配色（Hope Kids 品牌色循環）
 BADGE_COLORS = ["#f2a900", "#ff7a59", "#2bb3a3"]
@@ -83,6 +85,82 @@ def parse_schedule(rows):
     return date_str, roles, duty, rally
 
 
+ZH_MONTHS = ["一", "二", "三", "四", "五", "六", "七", "八", "九", "十", "十一", "十二"]
+
+
+def fetch_month_support(date_str):
+    """從當月班表分頁抓大班/小班支持夥伴。
+
+    月份分頁命名不一致（七月班表、8月班表、02月班表、八月 班表…），
+    依序嘗試候選名稱，並以「該分頁找得到當週日期」驗證抓對了分頁
+    （避免撈到去年同名的舊分頁）。
+    回傳 {"小班支持夥伴": 名字, "大班支持夥伴": 名字}，找不到就少 key。
+    """
+    m = re.match(r"(\d{4})/(\d{1,2})/(\d{1,2})", date_str or "")
+    if not m:
+        return {}
+    month, day = int(m.group(2)), int(m.group(3))
+    zh = ZH_MONTHS[month - 1]
+    candidates = [
+        f"{zh}月班表", f"{zh}月 班表",
+        f"{month}月班表", f"{month:02d}月班表",
+    ]
+    date_pat = re.compile(rf"(?<!\d)0?{month}/0?{day}(?!\d)")
+
+    for name in candidates:
+        try:
+            resp = requests.get(
+                f"https://docs.google.com/spreadsheets/d/{SHEET_ID}/gviz/tq",
+                params={"tqx": "out:csv", "sheet": name},
+                timeout=30,
+            )
+        except requests.RequestException:
+            continue
+        if resp.status_code != 200 or "<html" in resp.text[:300].lower():
+            continue
+        resp.encoding = "utf-8"
+        rows = list(csv.reader(io.StringIO(resp.text)))
+        support = parse_month_support(rows, date_pat)
+        if support:
+            print(f"[支持夥伴] 取自分頁「{name}」：{support}")
+            return support
+    print("[支持夥伴] 找不到當月班表分頁或該週日期，略過。")
+    return {}
+
+
+def parse_month_support(rows, date_pat):
+    """在月班表裡找 date_pat 那一週的大班/小班「支持夥伴」欄。"""
+    header_i = col_support = col_date = None
+    for i, row in enumerate(rows):
+        cells = [(c or "").strip() for c in row]
+        if "支持夥伴" in cells:
+            header_i, col_support = i, cells.index("支持夥伴")
+            for j, c in enumerate(cells):
+                if "日期" in c:
+                    col_date = j
+            break
+    if col_support is None or col_date is None:
+        return {}
+
+    result = {}
+    for i in range(header_i + 1, len(rows)):
+        cells = [(c or "").strip() for c in rows[i]]
+        date_cell = cells[col_date] if col_date < len(cells) else ""
+        if not date_pat.search(date_cell.replace("\n", " ")):
+            continue
+        # 日期是跨大班/小班兩列的合併儲存格，取這一列與下一列
+        for r in rows[i:i + 2]:
+            rc = [(c or "").strip() for c in r]
+            cls = rc[0] if rc else ""
+            name = rc[col_support] if col_support < len(rc) else ""
+            if name and "大班" in cls:
+                result["大班支持夥伴"] = name
+            elif name and "小班" in cls:
+                result["小班支持夥伴"] = name
+        break
+    return result
+
+
 def weekday_zh(date_str):
     from datetime import datetime
     try:
@@ -105,7 +183,7 @@ def role_row(label, name, color):
                 "backgroundColor": color,
                 "cornerRadius": "6px",
                 "paddingAll": "4px",
-                "width": "88px",
+                "width": "96px",
                 "contents": [{
                     "type": "text",
                     "text": label,
@@ -215,6 +293,8 @@ def main():
     if not date_str and not roles:
         print("試算表沒有可用的日期與崗位資料，跳過本次推播。")
         return
+
+    roles.update(fetch_month_support(date_str))
 
     message = build_flex(date_str, roles, duty, rally)
 
