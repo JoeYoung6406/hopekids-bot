@@ -4,3 +4,4 @@
 
 | 時間（台北） | Workflow | 觸發方式 | 結果 |
 | --- | --- | --- | --- |
+| 2026-07-19 13:44 | Hope Kids 每週服事表推播 | workflow_dispatch | success |
