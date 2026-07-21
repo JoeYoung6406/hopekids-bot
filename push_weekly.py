@@ -36,7 +36,10 @@ BADGE_COLORS = ["#f2a900", "#ff7a59", "#2bb3a3"]
 
 INK = "#4a3b22"
 SUN = "#ffc33b"
+CORAL = "#ff7a59"
 BG_SOFT = "#fffdf6"
+
+BREAKFAST_URL = "https://sundaylunchtc.paperform.co/"
 
 
 def fetch_rows():
@@ -250,6 +253,14 @@ def build_flex(date_str, roles, duty, rally):
             "layout": "vertical",
             "spacing": "sm",
             "contents": [
+                {
+                    "type": "button",
+                    "style": "primary",
+                    "color": CORAL,
+                    "height": "sm",
+                    "action": {"type": "uri", "label": "主日訂早餐（週四10PM截止）",
+                               "uri": BREAKFAST_URL},
+                },
                 {
                     "type": "button",
                     "style": "primary",
