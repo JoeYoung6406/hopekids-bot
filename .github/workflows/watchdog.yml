@@ -2,7 +2,7 @@ name: 推播監控（漏發自動補發）
 
 on:
   schedule:
-    - cron: '0 12 * * 2'   # 週二 UTC 12:00 = 台北 20:00，發送兩小時後檢查
+    - cron: '0 4 * * 3'    # 週三 UTC 04:00 = 台北 12:00，發送兩小時後檢查
   workflow_dispatch:
 
 permissions:
