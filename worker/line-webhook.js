@@ -26,9 +26,9 @@ async function verifySignature(secret, bodyText, signature) {
   return expected === signature;
 }
 
-async function dispatchWorkflow(env) {
+async function dispatchWorkflow(env, workflow = WORKFLOW) {
   const resp = await fetch(
-    `https://api.github.com/repos/${REPO}/actions/workflows/${WORKFLOW}/dispatches`,
+    `https://api.github.com/repos/${REPO}/actions/workflows/${workflow}/dispatches`,
     {
       method: "POST",
       headers: {
@@ -86,12 +86,30 @@ export default {
   },
 
   // Cloudflare Cron Trigger：設 `0 2 * * *`（每天 UTC 02:00 = 台北 10:00）。
-  // 為避免各家 cron 對「星期數字」的歧義，這裡每天都觸發，但只在台北時間
-  // 週三才真的發卡片——星期幾由 JS 可靠判斷，與 cron 的 day-of-week 脫鉤。
+  // 每天觸發，時間/日期一律用台北時間在 JS 判斷，與 cron 的星期數字脫鉤。
   async scheduled(event, env, ctx) {
     const taipei = new Date(Date.now() + 8 * 3600 * 1000);
-    if (taipei.getUTCDay() === 3) {   // 0=日 1=一 2=二 3=三 …
-      ctx.waitUntil(dispatchWorkflow(env));
+    const dow = taipei.getUTCDay();          // 0=日 1=一 2=二 3=三 …
+    const month = taipei.getUTCMonth() + 1;  // 1-12
+    const date = taipei.getUTCDate();
+
+    // 每週三 10:00：本週服事夥伴
+    if (dow === 3) {
+      ctx.waitUntil(dispatchWorkflow(env, "weekly.yml"));
+    }
+
+    // 單數月、第三個主日的隔天（週一）10:00：無法參與服事日期回覆表單
+    if (month % 2 === 1 && dow === 1 && date === mondayAfterThirdSunday(taipei)) {
+      ctx.waitUntil(dispatchWorkflow(env, "unavailable_form.yml"));
     }
   },
 };
+
+// 回傳當月「第三個主日的隔天週一」是幾號。
+function mondayAfterThirdSunday(taipei) {
+  const y = taipei.getUTCFullYear();
+  const m = taipei.getUTCMonth();
+  const firstDow = new Date(Date.UTC(y, m, 1)).getUTCDay(); // 該月 1 號星期幾
+  const firstSunday = 1 + ((7 - firstDow) % 7);             // 第一個主日日期
+  return firstSunday + 14 + 1;                              // 第三主日 +1 天
+}

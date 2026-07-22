@@ -1,0 +1,40 @@
+name: 無法參與服事日期表單提醒
+
+on:
+  # 由 Cloudflare Worker 在「單數月、第三主日隔天週一 10:00（台北）」dispatch。
+  workflow_dispatch:
+
+permissions:
+  contents: write   # 發送後把結果寫回 SEND_LOG.md
+
+jobs:
+  push-form:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        run: pip install requests
+
+      - name: Push form reminder to LINE
+        id: send
+        env:
+          LINE_TOKEN: ${{ secrets.LINE_TOKEN }}
+          LINE_GROUP_ID: ${{ secrets.LINE_GROUP_ID }}
+        run: python push_unavailable_form.py
+
+      - name: Record send log
+        if: always() && steps.send.outcome != 'skipped'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          echo "| $(TZ=Asia/Taipei date '+%Y-%m-%d %H:%M') | ${{ github.workflow }} | ${{ github.event_name }} | ${{ steps.send.outcome }} |" >> SEND_LOG.md
+          git add SEND_LOG.md
+          git commit -m "log: 發送紀錄 $(TZ=Asia/Taipei date '+%Y-%m-%d %H:%M')"
+          git pull --rebase origin main
+          git push
