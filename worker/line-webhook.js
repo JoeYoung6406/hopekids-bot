@@ -85,10 +85,13 @@ export default {
     return new Response("ok");
   },
 
-  // Cloudflare Cron Trigger：每週三 10:00（台北）準點觸發發卡片。
-  // 在 Dashboard → Settings → Trigger Events → Cron Triggers 設定 `0 2 * * 3`
-  //（UTC 02:00 = 台北 10:00）。Cloudflare 排程比 GitHub 準時得多。
+  // Cloudflare Cron Trigger：設 `0 2 * * *`（每天 UTC 02:00 = 台北 10:00）。
+  // 為避免各家 cron 對「星期數字」的歧義，這裡每天都觸發，但只在台北時間
+  // 週三才真的發卡片——星期幾由 JS 可靠判斷，與 cron 的 day-of-week 脫鉤。
   async scheduled(event, env, ctx) {
-    ctx.waitUntil(dispatchWorkflow(env));
+    const taipei = new Date(Date.now() + 8 * 3600 * 1000);
+    if (taipei.getUTCDay() === 3) {   // 0=日 1=一 2=二 3=三 …
+      ctx.waitUntil(dispatchWorkflow(env));
+    }
   },
 };
