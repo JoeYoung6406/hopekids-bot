@@ -14,7 +14,8 @@ import requests
 
 FORM_URL = "https://docs.google.com/forms/d/1CtC82qZ_8a-tNdKoJiAuqaDJUa5jrwrFpcXaqZa4GOQ/viewform"
 
-CORAL = "#ff7a59"
+SUN = "#ffc33b"
+SUN_DEEP = "#f2a900"
 INK = "#4a3b22"
 BG_SOFT = "#fffdf6"
 
@@ -34,12 +35,12 @@ def build_flex():
         "size": "mega",
         "header": {
             "type": "box", "layout": "vertical",
-            "backgroundColor": CORAL, "paddingAll": "16px",
+            "backgroundColor": SUN, "paddingAll": "16px",
             "contents": [
                 {"type": "text", "text": "HOPE KIDS 台中分部", "size": "xs",
-                 "weight": "bold", "color": "#ffffff"},
+                 "weight": "bold", "color": INK},
                 {"type": "text", "text": title, "size": "lg", "weight": "bold",
-                 "color": "#ffffff", "wrap": True, "margin": "sm"},
+                 "color": INK, "wrap": True, "margin": "sm"},
             ],
         },
         "body": {
@@ -50,14 +51,14 @@ def build_flex():
                  "text": "請各位服事夥伴抽空填寫\n以利同工安排服事表",
                  "size": "sm", "color": INK, "wrap": True, "align": "center"},
                 {"type": "text", "text": "上帝紀念你 / 妳的擺上 ～",
-                 "size": "sm", "color": CORAL, "weight": "bold",
+                 "size": "sm", "color": SUN_DEEP, "weight": "bold",
                  "wrap": True, "align": "center"},
             ],
         },
         "footer": {
             "type": "box", "layout": "vertical",
             "contents": [{
-                "type": "button", "style": "primary", "color": CORAL, "height": "sm",
+                "type": "button", "style": "primary", "color": INK, "height": "sm",
                 "action": {"type": "uri", "label": "填寫回覆表單", "uri": FORM_URL},
             }],
         },
