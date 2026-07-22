@@ -7,3 +7,4 @@
 | 2026-07-19 13:44 | Hope Kids 每週服事表推播 | workflow_dispatch | success |
 | 2026-07-21 19:43 | Hope Kids 每週服事表推播 | schedule | success |
 | 2026-07-22 12:54 | Hope Kids 每週服事表推播 | schedule | success |
+| 2026-07-23 02:22 | 無法參與服事日期表單提醒 | workflow_dispatch | success |
