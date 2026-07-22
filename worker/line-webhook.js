@@ -84,4 +84,11 @@ export default {
     }
     return new Response("ok");
   },
+
+  // Cloudflare Cron Trigger：每週三 10:00（台北）準點觸發發卡片。
+  // 在 Dashboard → Settings → Trigger Events → Cron Triggers 設定 `0 2 * * 3`
+  //（UTC 02:00 = 台北 10:00）。Cloudflare 排程比 GitHub 準時得多。
+  async scheduled(event, env, ctx) {
+    ctx.waitUntil(dispatchWorkflow(env));
+  },
 };

@@ -1,9 +1,9 @@
 name: Hope Kids 每週服事表推播
 
 on:
-  schedule:
-    - cron: '0 2 * * 3'    # 每週三 UTC 02:00 = 台北時間 10:00
-  workflow_dispatch:         # 允許手動觸發測試
+  # 準點觸發改由 Cloudflare Worker Cron（每週三 10:00 台北）dispatch，
+  # 不用 GitHub schedule（整點常延遲數小時）。這裡只保留手動與外部觸發。
+  workflow_dispatch:         # Cloudflare Worker 與手動測試皆用此觸發
 
 permissions:
   contents: write            # 發送後把結果寫回 SEND_LOG.md
