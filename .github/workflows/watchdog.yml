@@ -2,7 +2,10 @@ name: 推播監控（漏發自動補發）
 
 on:
   schedule:
-    - cron: '0 4 * * 3'    # 週三 UTC 04:00 = 台北 12:00，發送兩小時後檢查
+    # 只在週三巡檢；主要發送是 Cloudflare cron 台北 10:00（UTC 02:00）。
+    # 從台北 10:30 起每半小時檢查一次到 14:30，晚 30 分鐘開始以免和主要發送搶跑。
+    - cron: '30 2 * * 3'       # 台北週三 10:30
+    - cron: '0,30 3-6 * * 3'   # 台北週三 11:00 ~ 14:30，每半小時
   workflow_dispatch:
 
 permissions:
@@ -17,16 +20,25 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
         run: |
-          cutoff=$(date -u -d '12 hours ago' +%s)
-          ok=$(gh run list --workflow=weekly.yml --limit 20 --json conclusion,createdAt \
-            --jq "[.[] | select(.conclusion==\"success\" and (.createdAt|fromdate) > $cutoff)] | length")
+          cutoff=$(date -u -d '8 hours ago' +%s)
+          runs=$(gh run list --workflow=weekly.yml --limit 20 \
+            --json conclusion,status,createdAt)
+
+          ok=$(echo "$runs" | jq "[.[] | select(.conclusion==\"success\" and (.createdAt|fromdate) > $cutoff)] | length")
           if [ "$ok" -gt 0 ]; then
-            echo "過去 12 小時內有 $ok 筆成功推播，一切正常。"
+            echo "近 8 小時內已有成功推播，正常。"
             exit 0
           fi
-          echo "::warning::過去 6 小時內沒有成功推播，自動補發一次。"
+
+          inflight=$(echo "$runs" | jq "[.[] | select((.status==\"in_progress\" or .status==\"queued\") and (.createdAt|fromdate) > $cutoff)] | length")
+          if [ "$inflight" -gt 0 ]; then
+            echo "已有推播進行中，等下一輪巡檢確認即可，本輪不補發。"
+            exit 0
+          fi
+
+          echo "::warning::近 8 小時內沒有成功、也沒有進行中的推播，自動補發一次。"
           gh workflow run weekly.yml
           sleep 30
           run_id=$(gh run list --workflow=weekly.yml --limit 1 --json databaseId --jq '.[0].databaseId')
           gh run watch "$run_id" --exit-status
-          echo "補發成功。"
+          echo "補發完成。"
