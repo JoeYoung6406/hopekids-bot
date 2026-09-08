@@ -8,8 +8,9 @@
  * 改用 Cloudflare 的 Cron Trigger（很準時）在指定時間呼叫 GitHub 的
  * workflow_dispatch API，等於用 Cloudflare 的時鐘取代 GitHub 的時鐘。
  * 目前掛在這個 worker 上的排程：
- *   - 每天 台北10:00（cron 0 2 * * *）  → hopekids-bot repo（依星期/日期判斷要不要發）
- *   - 每週二 台北19:00（cron 0 11 * * 2）→ line-remind repo 的 remind.yml（小組聚會提醒）
+ *   - 每天   台北10:00（cron 0 2 * * *）   → hopekids-bot repo（依星期/日期判斷要不要發）
+ *   - 每週二 台北19:00（cron 0 11 * * 2）  → line-remind repo 的 remind.yml（小組聚會提醒）
+ *   - 週一~週五 台北06:00（cron 0 22 * * 0-4）→ line-remind repo 的 daily_plan.yml（每日計畫）
  *
  * 需要的環境變數（Cloudflare Worker 的 Settings → Variables and Secrets）：
  *   LINE_CHANNEL_SECRET   LINE Developers → Basic settings → Channel secret（驗證簽章）
@@ -96,12 +97,20 @@ export default {
   },
 
   // Cloudflare Cron Triggers（在 Worker → Settings → Triggers 底下加，可以掛多組）：
-  //   0 2 * * *   每天 台北10:00 → hopekids-bot（依星期/日期判斷要不要發）
-  //   0 11 * * 2  每週二 台北19:00 → line-remind 的 remind.yml（小組聚會提醒）
+  //   0 2 * * *   每天 台北10:00     → hopekids-bot（依星期/日期判斷要不要發）
+  //   0 11 * * 2  每週二 台北19:00   → line-remind 的 remind.yml（小組聚會提醒）
+  //   0 22 * * 0-4  週一~週五 台北06:00 → line-remind 的 daily_plan.yml（每日計畫）
+  //                 （UTC 日期會跨到隔天，所以填 UTC 週日~週四=0-4，對應台北週一~週五早上）
   async scheduled(event, env, ctx) {
     if (event.cron === "0 11 * * 2") {
       // 週二 19:00：小組聚會提醒（明天的聚會），用獨立的 line-remind 專屬 PAT
       ctx.waitUntil(dispatchWorkflow(env, "remind.yml", LINE_REMIND_REPO, env.GH_PAT_LINE_REMIND));
+      return;
+    }
+
+    if (event.cron === "0 22 * * 0-4") {
+      // 台北週一~週五 06:00：每日計畫發送，同樣用 line-remind 專屬 PAT
+      ctx.waitUntil(dispatchWorkflow(env, "daily_plan.yml", LINE_REMIND_REPO, env.GH_PAT_LINE_REMIND));
       return;
     }
 

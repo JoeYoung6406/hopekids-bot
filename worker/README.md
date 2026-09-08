@@ -38,15 +38,20 @@
 - 只理「私訊」且內容完全等於關鍵字；群組裡的訊息一律忽略。
 - 只有 `ALLOWED_USER_ID` 本人能觸發，其他人私訊只會拿到自己的 userId。
 
-## 追加：line-remind 小組聚會提醒（準點排程）
+## 追加：line-remind（小組聚會提醒 + 每日計畫，準點排程）
 
-這個 worker 原本只負責 hopekids-bot 的排程，現在多兼一個：每週二 台北19:00
-準時觸發 `line-remind` repo 的 `remind.yml`（小組聚會提醒），取代原本會延遲的
-GitHub 原生 `schedule:`。
+這個 worker 原本只負責 hopekids-bot 的排程，現在多兼兩個 `line-remind` repo 的排程，
+取代原本會延遲的 GitHub 原生 `schedule:`：
+
+- 每週二 台北19:00 → `remind.yml`（小組聚會提醒）
+- 週一~週五 台北06:00 → `daily_plan.yml`（每日計畫，週末不發）
+
+兩個排程共用同一組 PAT（`GH_PAT_LINE_REMIND`），因為都是 `line-remind` 這個 repo，
+差別只在觸發哪個 workflow 檔案。
 
 ### 設定步驟
 
-1. **建第二組 GitHub PAT**（跟 hopekids-bot 的 `GH_PAT`分開，各自只管各自的 repo）：
+1. **建第二組 GitHub PAT**（跟 hopekids-bot 的 `GH_PAT`分開，只管 `line-remind` 這個 repo）：
    GitHub → Settings → Developer settings → Fine-grained tokens → Generate new token
    - Repository access：Only select repositories → `line-remind`
    - Permissions → Repository permissions → **Actions: Read and write**
@@ -60,9 +65,14 @@ GitHub 原生 `schedule:`。
 3. **貼上更新後的 `line-webhook.js`**：把這個檔案最新內容整份貼到
    Worker → Edit code，蓋掉舊版 → Deploy。
 
-4. **加第二個 Cron Trigger**：Worker → Settings → Triggers → Cron Triggers → Add Cron Trigger
-   - 填 `0 11 * * 2`（UTC，= 台北每週二 19:00）
-   - 儲存
+4. **加兩個 Cron Trigger**：Worker → Settings → Triggers → Cron Triggers → Add Cron Trigger，
+   分別新增：
+   - `0 11 * * 2`（UTC，= 台北每週二 19:00，小組聚會提醒）
+   - `0 22 * * 0-4`（UTC 週日~週四 = 台北週一~週五 06:00，每日計畫，週末不發）
 
-5. 完成後，`line-remind` repo 那邊的 GitHub 原生 `schedule:` 已經拿掉了
-   （改成只留 `workflow_dispatch`），watchdog.yml 照舊在 21:00 巡檢、漏發自動補發。
+5. 完成後，`line-remind` repo 那邊的 GitHub 原生 `schedule:` 已經全部拿掉了
+   （兩個 workflow 都改成只留 `workflow_dispatch`），watchdog.yml 照舊巡檢、漏發自動補發。
+
+⚠️ **在完成上面 4 步之前，這兩個排程完全不會自動觸發**（原生排程已經移除、
+Cloudflare 那邊還沒接上），期間只能靠 watchdog 延遲補發或手動觸發，
+建議盡快做完這 4 步，愈晚做空窗期愈久。
