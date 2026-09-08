@@ -1,20 +1,30 @@
 /**
- * Hope Kids Bot — LINE Webhook (Cloudflare Worker)
+ * Hope Kids Bot — LINE Webhook + 排程 dispatcher (Cloudflare Worker)
  *
  * 私訊 bot「本週服事夥伴」→ 觸發 GitHub Actions 的 weekly.yml
  * → 服事卡片推播到官方群組（約 30~60 秒）。
  *
+ * 另外也身兼「準點排程 dispatcher」：GitHub 原生 schedule 常常整點延遲數小時，
+ * 改用 Cloudflare 的 Cron Trigger（很準時）在指定時間呼叫 GitHub 的
+ * workflow_dispatch API，等於用 Cloudflare 的時鐘取代 GitHub 的時鐘。
+ * 目前掛在這個 worker 上的排程：
+ *   - 每天 台北10:00（cron 0 2 * * *）  → hopekids-bot repo（依星期/日期判斷要不要發）
+ *   - 每週二 台北19:00（cron 0 11 * * 2）→ line-remind repo 的 remind.yml（小組聚會提醒）
+ *
  * 需要的環境變數（Cloudflare Worker 的 Settings → Variables and Secrets）：
- *   LINE_CHANNEL_SECRET  LINE Developers → Basic settings → Channel secret（驗證簽章）
- *   LINE_TOKEN           Messaging API 的 channel access token（回覆私訊用）
- *   GH_PAT               GitHub fine-grained PAT，只授權 hopekids-bot repo 的
- *                        Actions: Read and write
- *   ALLOWED_USER_ID      允許觸發的 LINE userId（第一次私訊 bot 會回你自己的 id）
+ *   LINE_CHANNEL_SECRET   LINE Developers → Basic settings → Channel secret（驗證簽章）
+ *   LINE_TOKEN            Messaging API 的 channel access token（回覆私訊用）
+ *   GH_PAT                GitHub fine-grained PAT，只授權 hopekids-bot repo 的
+ *                         Actions: Read and write
+ *   GH_PAT_LINE_REMIND    另一組 fine-grained PAT，只授權 line-remind repo 的
+ *                         Actions: Read and write（獨立金鑰，權限互不影響）
+ *   ALLOWED_USER_ID       允許觸發的 LINE userId（第一次私訊 bot 會回你自己的 id）
  */
 
 const KEYWORD = "本週服事夥伴";
 const REPO = "JoeYoung6406/hopekids-bot";
 const WORKFLOW = "weekly.yml";
+const LINE_REMIND_REPO = "JoeYoung6406/line-remind";
 
 async function verifySignature(secret, bodyText, signature) {
   const key = await crypto.subtle.importKey(
@@ -26,13 +36,13 @@ async function verifySignature(secret, bodyText, signature) {
   return expected === signature;
 }
 
-async function dispatchWorkflow(env, workflow = WORKFLOW) {
+async function dispatchWorkflow(env, workflow = WORKFLOW, repo = REPO, token = env.GH_PAT) {
   const resp = await fetch(
-    `https://api.github.com/repos/${REPO}/actions/workflows/${workflow}/dispatches`,
+    `https://api.github.com/repos/${repo}/actions/workflows/${workflow}/dispatches`,
     {
       method: "POST",
       headers: {
-        "Authorization": `Bearer ${env.GH_PAT}`,
+        "Authorization": `Bearer ${token}`,
         "Accept": "application/vnd.github+json",
         "User-Agent": "hopekids-line-webhook",
         "X-GitHub-Api-Version": "2022-11-28",
@@ -85,9 +95,17 @@ export default {
     return new Response("ok");
   },
 
-  // Cloudflare Cron Trigger：設 `0 2 * * *`（每天 UTC 02:00 = 台北 10:00）。
-  // 每天觸發，時間/日期一律用台北時間在 JS 判斷，與 cron 的星期數字脫鉤。
+  // Cloudflare Cron Triggers（在 Worker → Settings → Triggers 底下加，可以掛多組）：
+  //   0 2 * * *   每天 台北10:00 → hopekids-bot（依星期/日期判斷要不要發）
+  //   0 11 * * 2  每週二 台北19:00 → line-remind 的 remind.yml（小組聚會提醒）
   async scheduled(event, env, ctx) {
+    if (event.cron === "0 11 * * 2") {
+      // 週二 19:00：小組聚會提醒（明天的聚會），用獨立的 line-remind 專屬 PAT
+      ctx.waitUntil(dispatchWorkflow(env, "remind.yml", LINE_REMIND_REPO, env.GH_PAT_LINE_REMIND));
+      return;
+    }
+
+    // 其餘（0 2 * * *，每天 台北10:00）沿用原本依星期/日期判斷的邏輯
     const taipei = new Date(Date.now() + 8 * 3600 * 1000);
     const dow = taipei.getUTCDay();          // 0=日 1=一 2=二 3=三 …
     const month = taipei.getUTCMonth() + 1;  // 1-12

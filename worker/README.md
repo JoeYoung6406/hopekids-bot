@@ -37,3 +37,32 @@
 - 驗證 LINE 簽章（Channel secret），偽造請求直接 403。
 - 只理「私訊」且內容完全等於關鍵字；群組裡的訊息一律忽略。
 - 只有 `ALLOWED_USER_ID` 本人能觸發，其他人私訊只會拿到自己的 userId。
+
+## 追加：line-remind 小組聚會提醒（準點排程）
+
+這個 worker 原本只負責 hopekids-bot 的排程，現在多兼一個：每週二 台北19:00
+準時觸發 `line-remind` repo 的 `remind.yml`（小組聚會提醒），取代原本會延遲的
+GitHub 原生 `schedule:`。
+
+### 設定步驟
+
+1. **建第二組 GitHub PAT**（跟 hopekids-bot 的 `GH_PAT`分開，各自只管各自的 repo）：
+   GitHub → Settings → Developer settings → Fine-grained tokens → Generate new token
+   - Repository access：Only select repositories → `line-remind`
+   - Permissions → Repository permissions → **Actions: Read and write**
+   - 複製 token（只顯示一次）
+
+2. **加 Worker 變數**：Worker → Settings → Variables and Secrets → 新增一個 Secret：
+   | 名稱 | 值 |
+   | --- | --- |
+   | `GH_PAT_LINE_REMIND` | 步驟 1 的 token |
+
+3. **貼上更新後的 `line-webhook.js`**：把這個檔案最新內容整份貼到
+   Worker → Edit code，蓋掉舊版 → Deploy。
+
+4. **加第二個 Cron Trigger**：Worker → Settings → Triggers → Cron Triggers → Add Cron Trigger
+   - 填 `0 11 * * 2`（UTC，= 台北每週二 19:00）
+   - 儲存
+
+5. 完成後，`line-remind` repo 那邊的 GitHub 原生 `schedule:` 已經拿掉了
+   （改成只留 `workflow_dispatch`），watchdog.yml 照舊在 21:00 巡檢、漏發自動補發。
