@@ -14,3 +14,4 @@
 | 2026-08-19 10:00 | Hope Kids 每週服事表推播 | workflow_dispatch | success |
 | 2026-08-26 10:00 | Hope Kids 每週服事表推播 | workflow_dispatch | success |
 | 2026-09-02 10:00 | Hope Kids 每週服事表推播 | workflow_dispatch | success |
+| 2026-09-09 10:01 | Hope Kids 每週服事表推播 | workflow_dispatch | success |
