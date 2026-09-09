@@ -46,6 +46,9 @@
 - 每週二 台北19:00 → `remind.yml`（小組聚會提醒）
 - 週一~週五 台北06:00 → `daily_plan.yml`（每日計畫，週末不發）
 
+（這兩個「只在特定星期幾發」的判斷都寫在程式碼裡，Cron Trigger 本身設成每天觸發即可，
+細節見下方步驟4的說明。）
+
 兩個排程共用同一組 PAT（`GH_PAT_LINE_REMIND`），因為都是 `line-remind` 這個 repo，
 差別只在觸發哪個 workflow 檔案。
 
@@ -66,9 +69,10 @@
    Worker → Edit code，蓋掉舊版 → Deploy。
 
 4. **加兩個 Cron Trigger**：Worker → Settings → Triggers → Cron Triggers → Add Cron Trigger，
-   分別新增：
-   - `0 11 * * 2`（UTC，= 台北每週二 19:00，小組聚會提醒）
-   - `0 22 * * 0-4`（UTC 週日~週四 = 台北週一~週五 06:00，每日計畫，週末不發）
+   分別新增（⚠️ 兩組都不要加星期幾，Cloudflare 的星期欄位編號跟一般 cron 不同，
+   之前試過 `0 11 * * 2` 結果被解讀成週一而不是週二；星期幾的判斷已經寫進程式碼裡了）：
+   - `0 11 * * *`（UTC，= 台北每天 19:00；程式碼裡只有週二會真的觸發 remind.yml）
+   - `0 22 * * *`（UTC，= 台北每天 06:00；程式碼裡只有週一~週五會真的觸發 daily_plan.yml）
 
 5. 完成後，`line-remind` repo 那邊的 GitHub 原生 `schedule:` 已經全部拿掉了
    （兩個 workflow 都改成只留 `workflow_dispatch`），watchdog.yml 照舊巡檢、漏發自動補發。

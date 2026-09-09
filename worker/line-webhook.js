@@ -7,10 +7,11 @@
  * 另外也身兼「準點排程 dispatcher」：GitHub 原生 schedule 常常整點延遲數小時，
  * 改用 Cloudflare 的 Cron Trigger（很準時）在指定時間呼叫 GitHub 的
  * workflow_dispatch API，等於用 Cloudflare 的時鐘取代 GitHub 的時鐘。
- * 目前掛在這個 worker 上的排程：
- *   - 每天   台北10:00（cron 0 2 * * *）   → hopekids-bot repo（依星期/日期判斷要不要發）
- *   - 每週二 台北19:00（cron 0 11 * * 2）  → line-remind repo 的 remind.yml（小組聚會提醒）
- *   - 週一~週五 台北06:00（cron 0 22 * * 0-4）→ line-remind repo 的 daily_plan.yml（每日計畫）
+ * 目前掛在這個 worker 上的排程（Cloudflare 的星期欄位跟一般 cron 不同又愛驗證失敗，
+ * 所以全部改成「每天觸發」，星期幾要不要發交給 scheduled() 裡的 JS 判斷）：
+ *   - 每天 台北10:00（cron 0 2 * * *）  → hopekids-bot repo（依星期/日期判斷要不要發）
+ *   - 每天 台北19:00（cron 0 11 * * *） → line-remind repo 的 remind.yml（只有週二才發）
+ *   - 每天 台北06:00（cron 0 22 * * *） → line-remind repo 的 daily_plan.yml（只有週一~週五才發）
  *
  * 需要的環境變數（Cloudflare Worker 的 Settings → Variables and Secrets）：
  *   LINE_CHANNEL_SECRET   LINE Developers → Basic settings → Channel secret（驗證簽章）
@@ -97,20 +98,32 @@ export default {
   },
 
   // Cloudflare Cron Triggers（在 Worker → Settings → Triggers 底下加，可以掛多組）：
-  //   0 2 * * *   每天 台北10:00     → hopekids-bot（依星期/日期判斷要不要發）
-  //   0 11 * * 2  每週二 台北19:00   → line-remind 的 remind.yml（小組聚會提醒）
-  //   0 22 * * 0-4  週一~週五 台北06:00 → line-remind 的 daily_plan.yml（每日計畫）
-  //                 （UTC 日期會跨到隔天，所以填 UTC 週日~週四=0-4，對應台北週一~週五早上）
+  //   0 2 * * *   每天 台北10:00 → hopekids-bot（依星期/日期判斷要不要發）
+  //   0 11 * * *  每天 台北19:00 → line-remind 的 remind.yml（只有週二才發，週幾判斷交給程式碼）
+  //   0 22 * * *  每天 台北06:00 → line-remind 的 daily_plan.yml（只有週一~週五才發，同樣交給程式碼）
+  //
+  // 這兩組都刻意用「每天觸發」而不是在 cron 字串裡指定星期幾：
+  // Cloudflare 的 Cron Trigger 介面星期欄位編號跟一般 Linux cron 不同（且對範圍/清單
+  // 語法會驗證失敗），與其去猜它的規則，不如每天都觸發、星期幾要不要發交給下面的
+  // JS 判斷（用標準 JS Date.getUTCDay()，0=日 1=一 2=二…完全掌握在自己手上）。
   async scheduled(event, env, ctx) {
-    if (event.cron === "0 11 * * 2") {
-      // 週二 19:00：小組聚會提醒（明天的聚會），用獨立的 line-remind 專屬 PAT
-      ctx.waitUntil(dispatchWorkflow(env, "remind.yml", LINE_REMIND_REPO, env.GH_PAT_LINE_REMIND));
+    if (event.cron === "0 11 * * *") {
+      // 台北 19:00（只有週二才發）：小組聚會提醒，用獨立的 line-remind 專屬 PAT
+      const taipeiNow = new Date(Date.now() + 8 * 3600 * 1000);
+      const dow = taipeiNow.getUTCDay(); // 0=日 1=一 2=二 … 6=六
+      if (dow === 2) {
+        ctx.waitUntil(dispatchWorkflow(env, "remind.yml", LINE_REMIND_REPO, env.GH_PAT_LINE_REMIND));
+      }
       return;
     }
 
-    if (event.cron === "0 22 * * 0-4") {
-      // 台北週一~週五 06:00：每日計畫發送，同樣用 line-remind 專屬 PAT
-      ctx.waitUntil(dispatchWorkflow(env, "daily_plan.yml", LINE_REMIND_REPO, env.GH_PAT_LINE_REMIND));
+    if (event.cron === "0 22 * * *") {
+      // 台北 06:00（只有週一~週五才發，週末跳過）：每日計畫發送，用 line-remind 專屬 PAT
+      const taipeiNow = new Date(Date.now() + 8 * 3600 * 1000);
+      const dow = taipeiNow.getUTCDay(); // 0=日 1=一 … 6=六（此時已是台北當天早上的星期幾）
+      if (dow >= 1 && dow <= 5) {
+        ctx.waitUntil(dispatchWorkflow(env, "daily_plan.yml", LINE_REMIND_REPO, env.GH_PAT_LINE_REMIND));
+      }
       return;
     }
 
