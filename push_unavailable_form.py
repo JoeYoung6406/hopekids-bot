@@ -8,9 +8,12 @@
 import json
 import os
 import sys
+
 from datetime import datetime, timedelta, timezone
 
 import requests
+
+import skip
 
 FORM_URL = "https://docs.google.com/forms/d/1CtC82qZ_8a-tNdKoJiAuqaDJUa5jrwrFpcXaqZa4GOQ/viewform"
 
@@ -67,6 +70,9 @@ def build_flex():
 
 
 def main():
+    if skip.skipped():
+        return
+
     message = build_flex()
     if os.environ.get("DRY_RUN"):
         print(json.dumps(message, ensure_ascii=False, indent=2))

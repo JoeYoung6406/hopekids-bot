@@ -45,6 +45,10 @@ DRY_RUN=1 python push_weekly.py
 
 ## 調整
 
+- **暫停某一次推播**：把日期（台北時間 `YYYY-MM-DD`）寫進 `skip_dates.txt`，
+  例如 `2026-09-30  # 這週停發`。當天排程照常執行，但腳本會直接結束不發送，
+  watchdog 也不會判定漏發而補發（SEND_LOG.md 仍會記成 success）。
+  兩支推播腳本（服事表、無法服事日期表單）都吃這份清單；過期的日期留著不影響。
 - **發送時間**：改 `.github/workflows/weekly.yml` 的 cron（注意是 UTC，台北時間減 8 小時）
 - **顯示的崗位**：改 `push_weekly.py` 開頭的 `ROLES` 清單
 - **Bot 名稱／頭像**：在 LINE Official Account Manager 的帳號設定裡改

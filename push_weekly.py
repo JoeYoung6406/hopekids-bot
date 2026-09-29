@@ -13,6 +13,8 @@ import sys
 
 import requests
 
+import skip
+
 SHEET_ID = "1S08InCXZ9Al7I_L1BRRgDmH4w4NQaFTKERJ9-6yVZsQ"
 WEEKLY_GID = "1159891743"  # 當週服事表分頁
 SHEET_CSV_URL = (
@@ -300,6 +302,9 @@ def push(message):
 
 
 def main():
+    if skip.skipped():
+        return
+
     rows = fetch_rows()
     date_str, roles, duty, rally = parse_schedule(rows)
 
