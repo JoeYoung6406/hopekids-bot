@@ -43,6 +43,30 @@ gh secret set LINE_GROUP_ID --repo JoeYoung6406/hopekids-bot
 DRY_RUN=1 python push_weekly.py
 ```
 
+## 追加：第二隻 LINE 帳號輪替（突破免費200則/月額度）
+
+一隻 LINE Official Account 免費方案每月只有 200 則推播額度，用完當月就不能再發。
+解法是再建一隻帳號，兩隻帳號依「當天日期單雙號」輪流發送（跟 `line-remind` 的
+`send_daily.py` 同一個模式），等於把額度翻倍成 400 則/月。
+
+### 設定步驟
+
+1. **建第二個 LINE Bot**：比照上面「1. 建立 LINE Bot」的步驟，再建一個全新的
+   Messaging API channel（名稱可以一樣叫 Hope Kids Bot，或取別的名字都行，
+   使用者看到的推播訊息本來就是用同一套卡片樣式，帳號名稱不影響內容）
+2. **把這隻也加進同一個服事群組**：用它的 QR code 加好友、邀進跟原本同一個
+   LINE 群組（不用重新取得 Group ID，沿用現有的 `LINE_GROUP_ID` 即可，
+   因為是推到同一個群組，只是換一隻帳號發）
+3. **加第二組 GitHub Secret**：
+
+   ```bash
+   gh secret set LINE_TOKEN_B --repo JoeYoung6406/hopekids-bot
+   ```
+
+4. 完成後 `push_weekly.py`、`push_unavailable_form.py` 會自動依日期單雙號
+   在 `LINE_TOKEN`／`LINE_TOKEN_B` 之間輪替，不用再手動切換。
+   如果 `LINE_TOKEN_B` 還沒設定，程式會自動退回用 `LINE_TOKEN`，不會壞掉。
+
 ## 調整
 
 - **暫停某一次推播**：把日期（台北時間 `YYYY-MM-DD`）寫進 `skip_dates.txt`，

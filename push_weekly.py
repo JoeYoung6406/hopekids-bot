@@ -290,7 +290,13 @@ def build_flex(date_str, roles, duty, rally):
 
 
 def push(message):
-    token = os.environ["LINE_TOKEN"]
+    # 兩隻 LINE 官方帳號輪替（各自獨立的免費200則/月額度），跟
+    # line-remind/send_daily.py 同一個模式：依當天日期單雙號決定用哪隻。
+    import datetime as _dt
+    if _dt.datetime.now(_dt.timezone(_dt.timedelta(hours=8))).day % 2 == 1:
+        token = os.environ["LINE_TOKEN"]
+    else:
+        token = os.environ.get("LINE_TOKEN_B") or os.environ["LINE_TOKEN"]
     group_id = os.environ["LINE_GROUP_ID"]
     resp = requests.post(
         "https://api.line.me/v2/bot/message/push",

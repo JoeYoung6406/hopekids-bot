@@ -77,9 +77,17 @@ def main():
     if os.environ.get("DRY_RUN"):
         print(json.dumps(message, ensure_ascii=False, indent=2))
         return
+
+    # 兩隻 LINE 官方帳號輪替（各自獨立的免費200則/月額度），跟
+    # push_weekly.py／line-remind/send_daily.py 同一個模式。
+    if datetime.now(timezone(timedelta(hours=8))).day % 2 == 1:
+        token = os.environ["LINE_TOKEN"]
+    else:
+        token = os.environ.get("LINE_TOKEN_B") or os.environ["LINE_TOKEN"]
+
     resp = requests.post(
         "https://api.line.me/v2/bot/message/push",
-        headers={"Authorization": f"Bearer {os.environ['LINE_TOKEN']}"},
+        headers={"Authorization": f"Bearer {token}"},
         json={"to": os.environ["LINE_GROUP_ID"], "messages": [message]},
         timeout=30,
     )
