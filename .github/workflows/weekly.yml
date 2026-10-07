@@ -8,6 +8,12 @@ on:
 permissions:
   contents: write            # 發送後把結果寫回 SEND_LOG.md
 
+# 避免 watchdog 誤判失敗、重新觸發，跟上一次還沒跑完的執行同時搶 git/LINE，
+# 新的一次直接排隊等上一次跑完，不會並行。
+concurrency:
+  group: weekly-roster
+  cancel-in-progress: false
+
 jobs:
   push-roster:
     runs-on: ubuntu-latest
@@ -29,13 +35,18 @@ jobs:
           LINE_GROUP_ID: ${{ secrets.LINE_GROUP_ID }}
         run: python push_weekly.py
 
+      # 這步只是寫紀錄，萬一 git 衝突失敗，不該讓整個 job 被判定成「失敗」
+      # （上次就是這步失敗把整次誤判成失敗，害 watchdog 誤以為沒發成功而重複補發）。
+      # 所以：pull 放在修改檔案「之前」（工作目錄乾淨時做，不會卡 rebase），
+      # push 失敗時重試一次，最後整步 continue-on-error，記錄失敗也不影響 job 本身成功與否。
       - name: Record send log
         if: always() && steps.send.outcome != 'skipped'
+        continue-on-error: true
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
+          git pull --rebase origin main
           echo "| $(TZ=Asia/Taipei date '+%Y-%m-%d %H:%M') | ${{ github.workflow }} | ${{ github.event_name }} | ${{ steps.send.outcome }} |" >> SEND_LOG.md
           git add SEND_LOG.md
           git commit -m "log: 發送紀錄 $(TZ=Asia/Taipei date '+%Y-%m-%d %H:%M')"
-          git pull --rebase origin main
-          git push
+          git push || (git pull --rebase origin main && git push)
