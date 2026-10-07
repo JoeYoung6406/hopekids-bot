@@ -34,14 +34,15 @@ jobs:
         run: python push_unavailable_form.py
 
       # 只是寫紀錄，失敗不該讓整個 job 被判定成「失敗」（會害 watchdog 誤判重複補發）。
+      # git add -A 把任何既有未暫存變動一起收進這次 commit，避免 push 失敗時
+      # 才 pull --rebase 卻因工作目錄不乾淨而報錯。
       - name: Record send log
         if: always() && steps.send.outcome != 'skipped'
         continue-on-error: true
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git pull --rebase origin main
           echo "| $(TZ=Asia/Taipei date '+%Y-%m-%d %H:%M') | ${{ github.workflow }} | ${{ github.event_name }} | ${{ steps.send.outcome }} |" >> SEND_LOG.md
-          git add SEND_LOG.md
-          git commit -m "log: 發送紀錄 $(TZ=Asia/Taipei date '+%Y-%m-%d %H:%M')"
+          git add -A
+          git commit -m "log: 發送紀錄 $(TZ=Asia/Taipei date '+%Y-%m-%d %H:%M')" || echo "nothing to commit"
           git push || (git pull --rebase origin main && git push)

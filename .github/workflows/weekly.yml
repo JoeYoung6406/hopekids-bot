@@ -37,16 +37,17 @@ jobs:
 
       # 這步只是寫紀錄，萬一 git 衝突失敗，不該讓整個 job 被判定成「失敗」
       # （上次就是這步失敗把整次誤判成失敗，害 watchdog 誤以為沒發成功而重複補發）。
-      # 所以：pull 放在修改檔案「之前」（工作目錄乾淨時做，不會卡 rebase），
-      # push 失敗時重試一次，最後整步 continue-on-error，記錄失敗也不影響 job 本身成功與否。
+      # 所以：git add -A 把任何既有的未暫存變動一起收進這次 commit（CI 環境偶爾會有
+      # 行尾符號正規化之類的落差，不是真的內容變動，收掉即可），避免 push 失敗時
+      # 才 pull --rebase 卻因為工作目錄不乾淨而報錯；最後整步 continue-on-error，
+      # 記錄失敗也不影響 job 本身成功與否。
       - name: Record send log
         if: always() && steps.send.outcome != 'skipped'
         continue-on-error: true
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git pull --rebase origin main
           echo "| $(TZ=Asia/Taipei date '+%Y-%m-%d %H:%M') | ${{ github.workflow }} | ${{ github.event_name }} | ${{ steps.send.outcome }} |" >> SEND_LOG.md
-          git add SEND_LOG.md
-          git commit -m "log: 發送紀錄 $(TZ=Asia/Taipei date '+%Y-%m-%d %H:%M')"
+          git add -A
+          git commit -m "log: 發送紀錄 $(TZ=Asia/Taipei date '+%Y-%m-%d %H:%M')" || echo "nothing to commit"
           git push || (git pull --rebase origin main && git push)
