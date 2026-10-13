@@ -65,7 +65,7 @@ DRY_RUN=1 python push_weekly.py
 3. **在 LINE 群組換 bot**：先把 A 帳號移出群組，再邀 B 帳號進來。
 4. **取得 B 看到的 Group ID**：B 的 Webhook URL 暫時指到 [webhook.site](https://webhook.site)
    並開啟 Use webhook，B 一加入群組就會收到 `join` 事件，裡面的 `source.groupId`
-   就是它。（不同 provider 底下的帳號，同一個群組的 ID 會不一樣，所以要另外抓。）
+   就是它。（LINE 的 ID 會依帳號所屬的 provider 而不同，B 看到的群組 ID 不一定跟 A 一樣，抓一次最保險。）
 
    ```bash
    gh secret set LINE_GROUP_ID_B --repo JoeYoung6406/hopekids-bot
