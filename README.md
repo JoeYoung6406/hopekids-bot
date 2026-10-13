@@ -43,29 +43,42 @@ gh secret set LINE_GROUP_ID --repo JoeYoung6406/hopekids-bot
 DRY_RUN=1 python push_weekly.py
 ```
 
-## 追加：第二隻 LINE 帳號輪替（突破免費200則/月額度）
+## 備用帳號：A 帳號額度用完時，暫時改用 B 帳號
 
-一隻 LINE Official Account 免費方案每月只有 200 則推播額度，用完當月就不能再發。
-解法是再建一隻帳號，兩隻帳號依「當天日期單雙號」輪流發送（跟 `line-remind` 的
-`send_daily.py` 同一個模式），等於把額度翻倍成 400 則/月。
+免費方案每月 200 則，而且**推播到群組是按群組人數計費**（25 人的群組推一次＝扣 25 則），
+所以某個月推得比較多就可能爆量。這時可以暫時改用第二隻官方帳號（B）發送。
 
-### 設定步驟
+限制：**LINE 一個群組同時只能有一隻官方帳號**，所以兩隻不能同時待在群組裡輪流發，
+只能「整個月換成 B」，下個月再換回 A。
 
-1. **建第二個 LINE Bot**：比照上面「1. 建立 LINE Bot」的步驟，再建一個全新的
-   Messaging API channel（名稱可以一樣叫 Hope Kids Bot，或取別的名字都行，
-   使用者看到的推播訊息本來就是用同一套卡片樣式，帳號名稱不影響內容）
-2. **把這隻也加進同一個服事群組**：用它的 QR code 加好友、邀進跟原本同一個
-   LINE 群組（不用重新取得 Group ID，沿用現有的 `LINE_GROUP_ID` 即可，
-   因為是推到同一個群組，只是換一隻帳號發）
-3. **加第二組 GitHub Secret**：
+### 切換到 B（例：10 月爆量）
+
+1. **在 `account_b_months.txt` 加上月份**（例如 `2026-10`），推上 GitHub。
+   列在檔案裡的月份用 B，其他月份自動用 A，不用改程式。
+2. **建 B 帳號**（只有第一次需要）：比照上面「1. 建立 LINE Bot」再建一個 Messaging API
+   channel，發行 channel access token，然後：
 
    ```bash
    gh secret set LINE_TOKEN_B --repo JoeYoung6406/hopekids-bot
    ```
 
-4. 完成後 `push_weekly.py`、`push_unavailable_form.py` 會自動依日期單雙號
-   在 `LINE_TOKEN`／`LINE_TOKEN_B` 之間輪替，不用再手動切換。
-   如果 `LINE_TOKEN_B` 還沒設定，程式會自動退回用 `LINE_TOKEN`，不會壞掉。
+3. **在 LINE 群組換 bot**：先把 A 帳號移出群組，再邀 B 帳號進來。
+4. **取得 B 看到的 Group ID**：B 的 Webhook URL 暫時指到 [webhook.site](https://webhook.site)
+   並開啟 Use webhook，B 一加入群組就會收到 `join` 事件，裡面的 `source.groupId`
+   就是它。（不同 provider 底下的帳號，同一個群組的 ID 會不一樣，所以要另外抓。）
+
+   ```bash
+   gh secret set LINE_GROUP_ID_B --repo JoeYoung6406/hopekids-bot
+   ```
+
+   沒設 `LINE_GROUP_ID_B` 的話會沿用 `LINE_GROUP_ID`。
+
+如果某個月列為 B 卻沒有 `LINE_TOKEN_B`，推播會直接失敗（GitHub 會寄信），不會偷偷改用 A。
+
+### 換回 A（例：11 月）
+
+月份不在 `account_b_months.txt` 裡就自動用 A，程式不用動；但**月初第一次推播前**要在
+LINE 群組把 B 移出、把 A 邀回來（A 回到同一個群組，原本的 `LINE_GROUP_ID` 照用）。
 
 ## 調整
 

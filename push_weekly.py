@@ -13,6 +13,7 @@ import sys
 
 import requests
 
+import line_account
 import skip
 
 SHEET_ID = "1S08InCXZ9Al7I_L1BRRgDmH4w4NQaFTKERJ9-6yVZsQ"
@@ -289,24 +290,6 @@ def build_flex(date_str, roles, duty, rally):
     }
 
 
-def push(message):
-    # 兩隻 LINE 官方帳號輪替（各自獨立的免費200則/月額度），跟
-    # line-remind/send_daily.py 同一個模式：依當天日期單雙號決定用哪隻。
-    import datetime as _dt
-    if _dt.datetime.now(_dt.timezone(_dt.timedelta(hours=8))).day % 2 == 1:
-        token = os.environ["LINE_TOKEN"]
-    else:
-        token = os.environ.get("LINE_TOKEN_B") or os.environ["LINE_TOKEN"]
-    group_id = os.environ["LINE_GROUP_ID"]
-    resp = requests.post(
-        "https://api.line.me/v2/bot/message/push",
-        headers={"Authorization": f"Bearer {token}"},
-        json={"to": group_id, "messages": [message]},
-        timeout=30,
-    )
-    return resp
-
-
 def main():
     if skip.skipped():
         return
@@ -325,9 +308,10 @@ def main():
     if os.environ.get("DRY_RUN"):
         print(json.dumps(message, ensure_ascii=False, indent=2))
         print(f"\n[DRY RUN] 解析結果：日期={date_str} 崗位={roles} 值日生={duty} Rally={rally}")
+        print(f"[DRY RUN] 這個月使用 {line_account.active_account()} 帳號")
         return
 
-    resp = push(message)
+    resp = line_account.push(message)
     if resp.status_code == 200:
         print(f"[成功] 已推播 {date_str} 服事表")
     else:

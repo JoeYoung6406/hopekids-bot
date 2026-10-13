@@ -33,6 +33,8 @@ jobs:
         env:
           LINE_TOKEN: ${{ secrets.LINE_TOKEN }}
           LINE_GROUP_ID: ${{ secrets.LINE_GROUP_ID }}
+          LINE_TOKEN_B: ${{ secrets.LINE_TOKEN_B }}
+          LINE_GROUP_ID_B: ${{ secrets.LINE_GROUP_ID_B }}
         run: python push_weekly.py
 
       # 這步只是寫紀錄，萬一 git 衝突失敗，不該讓整個 job 被判定成「失敗」
