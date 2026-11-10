@@ -86,6 +86,10 @@ LINE 群組把 B 移出、把 A 邀回來（A 回到同一個群組，原本的 
   例如 `2026-09-30  # 這週停發`。當天排程照常執行，但腳本會直接結束不發送，
   watchdog 也不會判定漏發而補發（SEND_LOG.md 仍會記成 success）。
   兩支推播腳本（服事表、無法服事日期表單）都吃這份清單；過期的日期留著不影響。
+- **指定日期附上活動通知卡**（例如活動出席回覆表單）：在 `notices.py` 的 `NOTICES`
+  加上日期（台北 `YYYY-MM-DD`）和卡片。那天 10:00 的每週服事表推播會把卡片一起帶上，
+  同一則推播最多 5 張、只算一則額度。**只有週三有效**（只有服事表推播會附上）。
+  預覽：`python notices.py 2026-11-11`。通知卡被 LINE 退回時會改成只發服事表，Actions log 會印出警告。
 - **發送時間**：改 `.github/workflows/weekly.yml` 的 cron（注意是 UTC，台北時間減 8 小時）
 - **顯示的崗位**：改 `push_weekly.py` 開頭的 `ROLES` 清單
 - **Bot 名稱／頭像**：在 LINE Official Account Manager 的帳號設定裡改

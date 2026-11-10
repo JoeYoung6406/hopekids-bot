@@ -14,6 +14,7 @@ import sys
 import requests
 
 import line_account
+import notices
 import skip
 
 SHEET_ID = "1S08InCXZ9Al7I_L1BRRgDmH4w4NQaFTKERJ9-6yVZsQ"
@@ -296,27 +297,39 @@ def main():
 
     rows = fetch_rows()
     date_str, roles, duty, rally = parse_schedule(rows)
+    notice_cards = notices.today_messages()
 
-    if not date_str and not roles:
-        print("試算表沒有可用的日期與崗位資料，跳過本次推播。")
+    messages = []
+    if date_str or roles:
+        roles.update(fetch_month_support(date_str))
+        messages.append(build_flex(date_str, roles, duty, rally))
+    else:
+        print("試算表沒有可用的日期與崗位資料，服事表這次不發。")
+    messages += notice_cards
+    if not messages:
         return
-
-    roles.update(fetch_month_support(date_str))
-
-    message = build_flex(date_str, roles, duty, rally)
 
     if os.environ.get("DRY_RUN"):
-        print(json.dumps(message, ensure_ascii=False, indent=2))
+        print(json.dumps(messages, ensure_ascii=False, indent=2))
         print(f"\n[DRY RUN] 解析結果：日期={date_str} 崗位={roles} 值日生={duty} Rally={rally}")
-        print(f"[DRY RUN] 這個月使用 {line_account.active_account()} 帳號")
+        print(f"[DRY RUN] 活動通知卡 {len(notice_cards)} 張；這個月使用 {line_account.active_account()} 帳號")
         return
 
-    resp = line_account.push(message)
+    resp = line_account.push(messages)
     if resp.status_code == 200:
-        print(f"[成功] 已推播 {date_str} 服事表")
-    else:
-        print(f"[失敗] {resp.status_code}：{resp.text}")
-        sys.exit(1)
+        extra = f"＋活動通知卡 {len(notice_cards)} 張" if notice_cards else ""
+        print(f"[成功] 已推播 {date_str} 服事表{extra}")
+        return
+    print(f"[失敗] {resp.status_code}：{resp.text}")
+
+    # 通知卡有問題時 LINE 會整則退回；至少把服事表單獨發出去，別連累每週提醒
+    if notice_cards and len(messages) > len(notice_cards):
+        resp = line_account.push(messages[0])
+        if resp.status_code == 200:
+            print("[警告] 改成只發服事表；活動通知卡沒有發出去，請手動補發")
+            return
+        print(f"[失敗] 只發服事表也失敗 {resp.status_code}：{resp.text}")
+    sys.exit(1)
 
 
 if __name__ == "__main__":

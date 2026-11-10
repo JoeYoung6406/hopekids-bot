@@ -48,6 +48,8 @@ def credentials():
 
 
 def push(message):
+    """message 可以是一張卡片，或最多 5 張卡片的 list（同一則推播，只算一則額度）。"""
+    messages = message if isinstance(message, list) else [message]
     account, token, group_id = credentials()
     if os.environ.get("LINE_TEST_BROADCAST"):
         # 測試用：發給這隻帳號的所有好友，不發到群組（好友只有自己時就等於私訊自己）
@@ -55,13 +57,13 @@ def push(message):
         return requests.post(
             "https://api.line.me/v2/bot/message/broadcast",
             headers={"Authorization": f"Bearer {token}"},
-            json={"messages": [message]},
+            json={"messages": messages},
             timeout=30,
         )
     print(f"使用 {account} 帳號推播（{this_month()}）")
     return requests.post(
         "https://api.line.me/v2/bot/message/push",
         headers={"Authorization": f"Bearer {token}"},
-        json={"to": group_id, "messages": [message]},
+        json={"to": group_id, "messages": messages},
         timeout=30,
     )
