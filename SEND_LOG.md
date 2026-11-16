@@ -25,3 +25,4 @@
 | 2026-11-04 10:00 | Hope Kids 每週服事表推播 | workflow_dispatch | failure |
 | 2026-11-04 12:45 | Hope Kids 每週服事表推播 | workflow_dispatch | success |
 | 2026-11-11 10:00 | Hope Kids 每週服事表推播 | workflow_dispatch | success |
+| 2026-11-16 10:00 | 無法參與服事日期表單提醒 | workflow_dispatch | success |
